@@ -1,0 +1,544 @@
+<!doctype html>
+<html lang="th" class="h-full">
+ <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ผสมธาตุเคมี</title>
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <script src="/_sdk/element_sdk.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet">
+  <style>
+    * { font-family: 'Kanit', sans-serif; }
+    
+    @keyframes float {
+      0%, 100% { transform: translateY(0px) rotate(0deg); }
+      50% { transform: translateY(-10px) rotate(5deg); }
+    }
+    
+    @keyframes sparkle {
+      0%, 100% { opacity: 0; transform: scale(0); }
+      50% { opacity: 1; transform: scale(1); }
+    }
+    
+    @keyframes success-pop {
+      0% { transform: scale(0.5); opacity: 0; }
+      50% { transform: scale(1.2); }
+      100% { transform: scale(1); opacity: 1; }
+    }
+    
+    @keyframes bubble {
+      0% { transform: translateY(0) scale(1); opacity: 0.7; }
+      100% { transform: translateY(-100px) scale(0); opacity: 0; }
+    }
+    
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      25% { transform: translateX(-5px) rotate(-5deg); }
+      75% { transform: translateX(5px) rotate(5deg); }
+    }
+    
+    .element-card {
+      animation: float 3s ease-in-out infinite;
+      cursor: grab;
+      transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+    
+    .element-card:hover {
+      transform: scale(1.1) translateY(-5px);
+      box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+    }
+    
+    .element-card:active {
+      cursor: grabbing;
+      transform: scale(0.95);
+    }
+    
+    .element-card.selected {
+      animation: none;
+      transform: scale(1.15);
+      box-shadow: 0 0 30px currentColor;
+    }
+    
+    .mix-zone {
+      background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);
+      transition: all 0.3s ease;
+    }
+    
+    .mix-zone.active {
+      animation: shake 0.5s ease-in-out;
+      background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+    }
+    
+    .result-card {
+      animation: success-pop 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+    
+    .sparkle {
+      position: absolute;
+      width: 20px;
+      height: 20px;
+      animation: sparkle 1.5s ease-in-out infinite;
+    }
+    
+    .bubble {
+      position: absolute;
+      border-radius: 50%;
+      animation: bubble 2s ease-out forwards;
+    }
+    
+    .category-nonmetal { background: linear-gradient(135deg, #84fab0 0%, #8fd3f4 100%); }
+    .category-metal { background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%); }
+    .category-halogen { background: linear-gradient(135deg, #a18cd1 0%, #fbc2eb 100%); }
+    .category-noble { background: linear-gradient(135deg, #fad0c4 0%, #ffd1ff 100%); }
+    .category-alkaline { background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%); }
+    
+    .bg-pattern {
+      background-color: #fff5f8;
+      background-image: 
+        radial-gradient(circle at 20% 20%, rgba(255, 182, 193, 0.3) 0%, transparent 50%),
+        radial-gradient(circle at 80% 80%, rgba(173, 216, 230, 0.3) 0%, transparent 50%),
+        radial-gradient(circle at 40% 60%, rgba(255, 218, 185, 0.3) 0%, transparent 50%);
+    }
+  </style>
+  <style>body { box-sizing: border-box; }</style>
+  <script src="/_sdk/data_sdk.js" type="text/javascript"></script>
+ </head>
+ <body class="h-full bg-pattern overflow-auto">
+  <div id="app" class="min-h-full p-4 md:p-6"><!-- Header -->
+   <div class="text-center mb-6">
+    <h1 id="gameTitle" class="text-3xl md:text-4xl font-bold bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 bg-clip-text text-transparent">🧪 ผสมธาตุเคมี 🔬</h1>
+    <p class="text-gray-600 mt-2">เลือกธาตุ 2 ตัวมาผสมกันดูสิ! ✨</p>
+   </div><!-- Score & Stats -->
+   <div class="flex justify-center gap-4 mb-6">
+    <div class="bg-white/80 backdrop-blur rounded-2xl px-4 py-2 shadow-lg"><span class="text-gray-600">🏆 คะแนน:</span> <span id="score" class="font-bold text-purple-600 ml-1">0</span>
+    </div>
+    <div class="bg-white/80 backdrop-blur rounded-2xl px-4 py-2 shadow-lg"><span class="text-gray-600">🧬 ค้นพบ:</span> <span id="discovered" class="font-bold text-pink-600 ml-1">0</span> <span class="text-gray-400">/</span> <span id="total" class="text-gray-600">15</span>
+    </div>
+   </div><!-- Mix Zone -->
+   <div class="max-w-md mx-auto mb-6">
+    <div id="mixZone" class="mix-zone rounded-3xl p-6 shadow-xl relative overflow-hidden">
+     <div class="text-center text-gray-600 mb-4">
+      🔄 โซนผสมธาตุ
+     </div>
+     <div class="flex justify-center items-center gap-4">
+      <div id="slot1" class="w-20 h-20 md:w-24 md:h-24 rounded-2xl bg-white/50 border-4 border-dashed border-white/80 flex items-center justify-center text-4xl transition-all"><span class="text-gray-400">?</span>
+      </div>
+      <div class="text-3xl">
+       ➕
+      </div>
+      <div id="slot2" class="w-20 h-20 md:w-24 md:h-24 rounded-2xl bg-white/50 border-4 border-dashed border-white/80 flex items-center justify-center text-4xl transition-all"><span class="text-gray-400">?</span>
+      </div>
+      <div class="text-3xl">
+       =
+      </div>
+      <div id="resultSlot" class="w-20 h-20 md:w-24 md:h-24 rounded-2xl bg-white/50 border-4 border-dashed border-white/80 flex items-center justify-center transition-all"><span class="text-gray-400 text-2xl">❓</span>
+      </div>
+     </div><button id="mixBtn" class="mt-4 w-full py-3 rounded-2xl bg-gradient-to-r from-pink-400 to-purple-500 text-white font-bold text-lg shadow-lg hover:shadow-xl hover:scale-105 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"> ✨ ผสมเลย! ✨ </button> <button id="clearBtn" class="mt-2 w-full py-2 rounded-xl bg-white/60 text-gray-600 font-medium hover:bg-white/80 transition-all"> 🔄 ล้างใหม่ </button>
+    </div>
+   </div><!-- Elements Grid -->
+   <div class="max-w-4xl mx-auto">
+    <h2 class="text-xl font-bold text-center text-gray-700 mb-4">🌈 เลือกธาตุ</h2>
+    <div id="elementsGrid" class="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-3 justify-items-center"><!-- Elements will be generated here -->
+    </div>
+   </div><!-- Discovered Compounds -->
+   <div class="max-w-4xl mx-auto mt-8">
+    <h2 class="text-xl font-bold text-center text-gray-700 mb-4">📚 สารประกอบที่ค้นพบ</h2>
+    <div id="compoundsList" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3"><!-- Discovered compounds will appear here -->
+    </div>
+    <div id="emptyState" class="text-center py-8 text-gray-400">
+     <div class="text-4xl mb-2">
+      🔍
+     </div>
+     <p>ยังไม่มีสารประกอบที่ค้นพบ</p>
+     <p class="text-sm">ลองผสมธาตุดูสิ!</p>
+    </div>
+   </div><!-- Toast -->
+   <div id="toast" class="fixed bottom-4 left-1/2 -translate-x-1/2 bg-white rounded-2xl shadow-2xl px-6 py-4 transform translate-y-full opacity-0 transition-all duration-300 z-50">
+    <div id="toastContent" class="flex items-center gap-3"><span id="toastIcon" class="text-3xl">🎉</span>
+     <div>
+      <div id="toastTitle" class="font-bold text-gray-800"></div>
+      <div id="toastDesc" class="text-sm text-gray-600"></div>
+     </div>
+    </div>
+   </div>
+  </div>
+  <script>
+    // Game Data
+    const elements = [
+      { symbol: 'H', name: 'ไฮโดรเจน', number: 1, category: 'nonmetal', emoji: '💧' },
+      { symbol: 'He', name: 'ฮีเลียม', number: 2, category: 'noble', emoji: '🎈' },
+      { symbol: 'C', name: 'คาร์บอน', number: 6, category: 'nonmetal', emoji: '⚫' },
+      { symbol: 'N', name: 'ไนโตรเจน', number: 7, category: 'nonmetal', emoji: '💨' },
+      { symbol: 'O', name: 'ออกซิเจน', number: 8, category: 'nonmetal', emoji: '🌬️' },
+      { symbol: 'Na', name: 'โซเดียม', number: 11, category: 'alkaline', emoji: '🧂' },
+      { symbol: 'Mg', name: 'แมกนีเซียม', number: 12, category: 'alkaline', emoji: '✨' },
+      { symbol: 'Al', name: 'อะลูมิเนียม', number: 13, category: 'metal', emoji: '🥫' },
+      { symbol: 'S', name: 'กำมะถัน', number: 16, category: 'nonmetal', emoji: '🌋' },
+      { symbol: 'Cl', name: 'คลอรีน', number: 17, category: 'halogen', emoji: '🧪' },
+      { symbol: 'K', name: 'โพแทสเซียม', number: 19, category: 'alkaline', emoji: '🍌' },
+      { symbol: 'Ca', name: 'แคลเซียม', number: 20, category: 'alkaline', emoji: '🦴' },
+      { symbol: 'Fe', name: 'เหล็ก', number: 26, category: 'metal', emoji: '🔩' },
+      { symbol: 'Cu', name: 'ทองแดง', number: 29, category: 'metal', emoji: '🥉' },
+      { symbol: 'Zn', name: 'สังกะสี', number: 30, category: 'metal', emoji: '🔋' },
+      { symbol: 'Ag', name: 'เงิน', number: 47, category: 'metal', emoji: '🥈' },
+      { symbol: 'Au', name: 'ทองคำ', number: 79, category: 'metal', emoji: '🥇' },
+    ];
+
+    const reactions = [
+      // Element + Element = Element (alloys/combinations)
+      { elements: ['Fe', 'C'], result: 'Fe', resultName: 'เหล็ก', emoji: '🔩', desc: 'เหล็กเกิดจากการผสม', points: 15, resultCategory: 'metal' },
+      { elements: ['Cu', 'Zn'], result: 'Cu', resultName: 'ทองแดง', emoji: '🥉', desc: 'ทองแดงเกิดจากการผสม', points: 15, resultCategory: 'metal' },
+      { elements: ['H', 'C'], result: 'C', resultName: 'คาร์บอน', emoji: '⚫', desc: 'คาร์บอนเกิดจากการแยก', points: 15, resultCategory: 'nonmetal' },
+      { elements: ['O', 'N'], result: 'O', resultName: 'ออกซิเจน', emoji: '🌬️', desc: 'ออกซิเจนเกิดจากการแยก', points: 15, resultCategory: 'nonmetal' },
+      { elements: ['Na', 'K'], result: 'Na', resultName: 'โซเดียม', emoji: '🧂', desc: 'โซเดียมที่บริสุทธิ์', points: 15, resultCategory: 'alkaline' },
+      { elements: ['Al', 'Cu'], result: 'Al', resultName: 'อะลูมิเนียม', emoji: '🥫', desc: 'อะลูมิเนียมเกิดจากการแยก', points: 15, resultCategory: 'metal' },
+      { elements: ['Mg', 'Ca'], result: 'Mg', resultName: 'แมกนีเซียม', emoji: '✨', desc: 'แมกนีเซียมที่บริสุทธิ์', points: 15, resultCategory: 'alkaline' },
+      { elements: ['S', 'O'], result: 'S', resultName: 'กำมะถัน', emoji: '🌋', desc: 'กำมะถันเกิดจากการแยก', points: 15, resultCategory: 'nonmetal' },
+      { elements: ['Cl', 'H'], result: 'Cl', resultName: 'คลอรีน', emoji: '🧪', desc: 'คลอรีนเกิดจากการแยก', points: 15, resultCategory: 'halogen' },
+      { elements: ['Au', 'Cu'], result: 'Au', resultName: 'ทองคำ', emoji: '🥇', desc: 'ทองคำที่บริสุทธิ์', points: 20, resultCategory: 'metal' },
+      // Compounds (original)
+      { elements: ['H', 'O'], formula: 'H₂O', name: 'น้ำ', emoji: '💧', desc: 'ของเหลวที่จำเป็นต่อสิ่งมีชีวิต', points: 10 },
+      { elements: ['Na', 'Cl'], formula: 'NaCl', name: 'เกลือแกง', emoji: '🧂', desc: 'เครื่องปรุงรสยอดนิยม', points: 15 },
+      { elements: ['H', 'Cl'], formula: 'HCl', name: 'กรดเกลือ', emoji: '⚗️', desc: 'กรดที่พบในกระเพาะอาหาร', points: 20 },
+      { elements: ['C', 'O'], formula: 'CO₂', name: 'คาร์บอนไดออกไซด์', emoji: '💨', desc: 'แก๊สที่เราหายใจออก', points: 15 },
+      { elements: ['H', 'N'], formula: 'NH₃', name: 'แอมโมเนีย', emoji: '🧴', desc: 'ใช้ทำปุ๋ยและน้ำยาทำความสะอาด', points: 20 },
+      { elements: ['Ca', 'O'], formula: 'CaO', name: 'ปูนขาว', emoji: '🏗️', desc: 'ใช้ในงานก่อสร้าง', points: 20 },
+      { elements: ['Fe', 'O'], formula: 'Fe₂O₃', name: 'สนิมเหล็ก', emoji: '🔴', desc: 'เกิดจากเหล็กทำปฏิกิริยากับออกซิเจน', points: 15 },
+      { elements: ['Mg', 'O'], formula: 'MgO', name: 'แมกนีเซียมออกไซด์', emoji: '⚪', desc: 'ใช้ทำยาลดกรด', points: 20 },
+      { elements: ['H', 'S'], formula: 'H₂S', name: 'ไฮโดรเจนซัลไฟด์', emoji: '🥚', desc: 'แก๊สกลิ่นไข่เน่า', points: 25 },
+      { elements: ['Cu', 'S'], formula: 'CuS', name: 'ทองแดงซัลไฟด์', emoji: '🖤', desc: 'แร่ที่มีสีดำ', points: 25 },
+      { elements: ['K', 'Cl'], formula: 'KCl', name: 'โพแทสเซียมคลอไรด์', emoji: '💊', desc: 'ใช้ทำปุ๋ยและยา', points: 20 },
+      { elements: ['Zn', 'O'], formula: 'ZnO', name: 'ซิงค์ออกไซด์', emoji: '🧴', desc: 'ใช้ทำครีมกันแดด', points: 20 },
+      { elements: ['Al', 'O'], formula: 'Al₂O₃', name: 'อะลูมินา', emoji: '💎', desc: 'สารประกอบที่แข็งมาก', points: 25 },
+      { elements: ['Na', 'O'], formula: 'Na₂O', name: 'โซเดียมออกไซด์', emoji: '🔥', desc: 'ใช้ทำแก้ว', points: 20 },
+      { elements: ['Ca', 'C'], formula: 'CaC₂', name: 'แคลเซียมคาร์ไบด์', emoji: '💥', desc: 'ใช้ทำก๊าซอะเซทิลีน', points: 30 },
+      // Compound + Element reactions
+      { compoundFormula: 'H₂O', element: 'O', result: 'O', resultName: 'ออกซิเจน', emoji: '🌬️', desc: 'น้ำแตกตัวให้ออกซิเจน', points: 20 },
+      { compoundFormula: 'H₂O', element: 'H', result: 'H', resultName: 'ไฮโดรเจน', emoji: '💧', desc: 'น้ำแตกตัวให้ไฮโดรเจน', points: 20 },
+      { compoundFormula: 'NaCl', element: 'Na', result: 'Na', resultName: 'โซเดียม', emoji: '🧂', desc: 'เกลือแตกตัวให้โซเดียม', points: 25 },
+      { compoundFormula: 'NaCl', element: 'Cl', result: 'Cl', resultName: 'คลอรีน', emoji: '🧪', desc: 'เกลือแตกตัวให้คลอรีน', points: 25 },
+      { compoundFormula: 'CO₂', element: 'C', result: 'C', resultName: 'คาร์บอน', emoji: '⚫', desc: 'คาร์บอนไดออกไซด์แตกตัว', points: 20 },
+      { compoundFormula: 'CO₂', element: 'O', result: 'O', resultName: 'ออกซิเจน', emoji: '🌬️', desc: 'คาร์บอนไดออกไซด์ปล่อยออกซิเจน', points: 20 },
+      { compoundFormula: 'HCl', element: 'H', result: 'H', resultName: 'ไฮโดรเจน', emoji: '💧', desc: 'กรดเกลือแตกตัว', points: 20 },
+      { compoundFormula: 'HCl', element: 'Cl', result: 'Cl', resultName: 'คลอรีน', emoji: '🧪', desc: 'กรดเกลือปล่อยคลอรีน', points: 20 },
+      { compoundFormula: 'CaO', element: 'Ca', result: 'Ca', resultName: 'แคลเซียม', emoji: '🦴', desc: 'ปูนขาวแตกตัว', points: 25 },
+      { compoundFormula: 'Fe₂O₃', element: 'Fe', result: 'Fe', resultName: 'เหล็ก', emoji: '🔩', desc: 'สนิมเหล็กปล่อยเหล็ก', points: 25 },
+      { compoundFormula: 'MgO', element: 'Mg', result: 'Mg', resultName: 'แมกนีเซียม', emoji: '✨', desc: 'แมกนีเซียมออกไซด์แตกตัว', points: 25 },
+    ];
+
+    // Game State
+    let selectedElements = [];
+    let discoveredReactions = [];
+    let score = 0;
+
+    const defaultConfig = {
+      game_title: '🧪 ผสมธาตุเคมี 🔬',
+      background_color: '#fff5f8',
+      primary_color: '#ec4899',
+      secondary_color: '#8b5cf6',
+      text_color: '#374151',
+      card_color: '#ffffff'
+    };
+
+    // Initialize Elements SDK
+    window.elementSdk.init({
+      defaultConfig,
+      onConfigChange: async (config) => {
+        const title = config.game_title || defaultConfig.game_title;
+        const bgColor = config.background_color || defaultConfig.background_color;
+        const primaryColor = config.primary_color || defaultConfig.primary_color;
+        const secondaryColor = config.secondary_color || defaultConfig.secondary_color;
+        const textColor = config.text_color || defaultConfig.text_color;
+        
+        document.getElementById('gameTitle').textContent = title;
+        document.body.style.backgroundColor = bgColor;
+        
+        const mixBtn = document.getElementById('mixBtn');
+        mixBtn.style.background = `linear-gradient(to right, ${primaryColor}, ${secondaryColor})`;
+        
+        document.querySelectorAll('.text-gray-700, .text-gray-600').forEach(el => {
+          el.style.color = textColor;
+        });
+      },
+      mapToCapabilities: (config) => ({
+        recolorables: [
+          {
+            get: () => config.background_color || defaultConfig.background_color,
+            set: (value) => window.elementSdk.setConfig({ background_color: value })
+          },
+          {
+            get: () => config.primary_color || defaultConfig.primary_color,
+            set: (value) => window.elementSdk.setConfig({ primary_color: value })
+          },
+          {
+            get: () => config.secondary_color || defaultConfig.secondary_color,
+            set: (value) => window.elementSdk.setConfig({ secondary_color: value })
+          },
+          {
+            get: () => config.text_color || defaultConfig.text_color,
+            set: (value) => window.elementSdk.setConfig({ text_color: value })
+          },
+          {
+            get: () => config.card_color || defaultConfig.card_color,
+            set: (value) => window.elementSdk.setConfig({ card_color: value })
+          }
+        ],
+        borderables: [],
+        fontEditable: undefined,
+        fontSizeable: undefined
+      }),
+      mapToEditPanelValues: (config) => new Map([
+        ['game_title', config.game_title || defaultConfig.game_title]
+      ])
+    });
+
+    // DOM Elements
+    const elementsGrid = document.getElementById('elementsGrid');
+    const slot1 = document.getElementById('slot1');
+    const slot2 = document.getElementById('slot2');
+    const resultSlot = document.getElementById('resultSlot');
+    const mixBtn = document.getElementById('mixBtn');
+    const clearBtn = document.getElementById('clearBtn');
+    const mixZone = document.getElementById('mixZone');
+    const compoundsList = document.getElementById('compoundsList');
+    const emptyState = document.getElementById('emptyState');
+    const scoreEl = document.getElementById('score');
+    const discoveredEl = document.getElementById('discovered');
+    const totalEl = document.getElementById('total');
+
+    // Initialize Game
+    function init() {
+      totalEl.textContent = reactions.length;
+      renderElements();
+      updateMixButton();
+    }
+
+    // Render Element Cards
+    function renderElements() {
+      elementsGrid.innerHTML = '';
+      elements.forEach((element, index) => {
+        const card = document.createElement('div');
+        card.className = `element-card category-${element.category} rounded-2xl p-2 md:p-3 text-center shadow-lg w-14 h-14 md:w-16 md:h-16 flex flex-col justify-center items-center`;
+        card.style.animationDelay = `${index * 0.1}s`;
+        card.innerHTML = `
+          <div class="text-lg md:text-xl font-bold text-gray-800">${element.symbol}</div>
+          <div class="text-xs text-gray-600">${element.number}</div>
+        `;
+        card.title = `${element.emoji} ${element.name}`;
+        card.addEventListener('click', () => selectElement(element));
+        elementsGrid.appendChild(card);
+      });
+    }
+
+    // Select Element
+    function selectElement(element) {
+      if (selectedElements.length >= 2) return;
+      if (selectedElements.find(e => e.symbol === element.symbol)) {
+        showToast('⚠️', 'เลือกแล้ว!', 'ธาตุนี้ถูกเลือกแล้ว ลองเลือกธาตุอื่น');
+        return;
+      }
+
+      selectedElements.push(element);
+      createBubbles();
+      
+      const slot = selectedElements.length === 1 ? slot1 : slot2;
+      slot.innerHTML = `
+        <div class="flex flex-col items-center">
+          <span class="text-2xl md:text-3xl font-bold text-gray-800">${element.symbol}</span>
+          <span class="text-xs text-gray-500">${element.emoji}</span>
+        </div>
+      `;
+      slot.classList.add(`category-${element.category}`);
+      slot.classList.remove('border-dashed');
+      
+      updateMixButton();
+    }
+
+    // Create Bubble Effect
+    function createBubbles() {
+      const colors = ['#ff6b9d', '#c792ea', '#7ec8e3', '#a8e6cf', '#ffd93d'];
+      for (let i = 0; i < 5; i++) {
+        const bubble = document.createElement('div');
+        bubble.className = 'bubble';
+        bubble.style.left = Math.random() * 100 + '%';
+        bubble.style.bottom = '0';
+        bubble.style.width = (Math.random() * 20 + 10) + 'px';
+        bubble.style.height = bubble.style.width;
+        bubble.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+        bubble.style.animationDuration = (Math.random() * 1 + 1) + 's';
+        mixZone.appendChild(bubble);
+        setTimeout(() => bubble.remove(), 2000);
+      }
+    }
+
+    // Update Mix Button State
+    function updateMixButton() {
+      mixBtn.disabled = selectedElements.length < 2;
+    }
+
+    // Mix Elements
+    function mixElements() {
+      if (selectedElements.length < 2) return;
+
+      mixZone.classList.add('active');
+      mixBtn.disabled = true;
+      
+      // Check if one is a compound (has formula property)
+      const isCompoundMix = selectedElements.some(e => e.formula);
+      let reaction = null;
+
+      if (isCompoundMix) {
+        // Find compound + element reaction
+        const compound = selectedElements.find(e => e.formula);
+        const element = selectedElements.find(e => !e.formula);
+        
+        if (compound && element) {
+          reaction = reactions.find(r => 
+            r.compoundFormula === compound.formula && r.element === element.symbol
+          );
+        }
+      } else {
+        // Regular element + element reaction
+        const symbols = selectedElements.map(e => e.symbol).sort();
+        reaction = reactions.find(r => {
+          if (!r.elements) return false;
+          const reactionSymbols = [...r.elements].sort();
+          return reactionSymbols[0] === symbols[0] && reactionSymbols[1] === symbols[1];
+        });
+      }
+
+      setTimeout(() => {
+        mixZone.classList.remove('active');
+        
+        if (reaction) {
+          const alreadyDiscovered = discoveredReactions.find(r => {
+            // Check compound + element reaction
+            if (reaction.compoundFormula && reaction.element) {
+              return r.compoundFormula === reaction.compoundFormula && r.element === reaction.element;
+            }
+            // Check if it's an element result
+            if (reaction.result) {
+              return r.result === reaction.result && r.elements && r.elements.sort().join(',') === reaction.elements.sort().join(',');
+            }
+            // Check if it's a formula result
+            return r.formula === reaction.formula && r.elements && r.elements.sort().join(',') === reaction.elements.sort().join(',');
+          });
+          
+          // Determine display text
+          const displayText = reaction.formula ? reaction.formula : reaction.result;
+          const displayEmoji = reaction.emoji;
+          
+          resultSlot.innerHTML = `
+            <div class="result-card flex flex-col items-center">
+              <span class="text-2xl">${displayEmoji}</span>
+              <span class="text-xs font-bold text-gray-700">${displayText}</span>
+            </div>
+          `;
+          resultSlot.classList.add('bg-gradient-to-br', 'from-green-200', 'to-emerald-300');
+          resultSlot.classList.remove('border-dashed');
+
+          if (alreadyDiscovered) {
+            const resultName = reaction.name || reaction.resultName;
+            showToast('🔄', resultName, 'ค้นพบแล้ว! (+5 คะแนน)');
+            score += 5;
+          } else {
+            discoveredReactions.push(reaction);
+            score += reaction.points;
+            const resultName = reaction.name || reaction.resultName;
+            showToast('🎉', `ค้นพบ ${resultName}!`, `${reaction.desc} (+${reaction.points} คะแนน)`);
+            renderDiscoveredReactions();
+          }
+        } else {
+          resultSlot.innerHTML = `
+            <div class="result-card flex flex-col items-center">
+              <span class="text-2xl">❌</span>
+              <span class="text-xs text-gray-500">ไม่เกิด</span>
+            </div>
+          `;
+          resultSlot.classList.add('bg-gradient-to-br', 'from-red-200', 'to-pink-200');
+          resultSlot.classList.remove('border-dashed');
+          showToast('🤔', 'ไม่เกิดปฏิกิริยา', 'ลองผสมธาตุคู่อื่นดูนะ!');
+        }
+
+        scoreEl.textContent = score;
+        discoveredEl.textContent = discoveredReactions.length;
+        
+        // Check win condition
+        if (discoveredReactions.length === reactions.length) {
+          setTimeout(() => {
+            showToast('🏆', 'ยินดีด้วย!', 'คุณค้นพบปฏิกิริยาทั้งหมดแล้ว!');
+          }, 1000);
+        }
+      }, 800);
+    }
+
+    // Clear Selection
+    function clearSelection() {
+      selectedElements = [];
+      slot1.innerHTML = '<span class="text-gray-400">?</span>';
+      slot2.innerHTML = '<span class="text-gray-400">?</span>';
+      resultSlot.innerHTML = '<span class="text-gray-400 text-2xl">❓</span>';
+      
+      [slot1, slot2, resultSlot].forEach(slot => {
+        slot.className = 'w-20 h-20 md:w-24 md:h-24 rounded-2xl bg-white/50 border-4 border-dashed border-white/80 flex items-center justify-center text-4xl transition-all';
+      });
+      
+      updateMixButton();
+    }
+
+    // Render Discovered Reactions
+    function renderDiscoveredReactions() {
+      if (discoveredReactions.length === 0) {
+        emptyState.style.display = 'block';
+        compoundsList.innerHTML = '';
+        return;
+      }
+
+      emptyState.style.display = 'none';
+      compoundsList.innerHTML = '';
+      
+      discoveredReactions.forEach(reaction => {
+        const card = document.createElement('div');
+        card.className = 'result-card bg-white/80 backdrop-blur rounded-2xl p-4 shadow-lg hover:shadow-xl hover:scale-105 transition-all cursor-pointer';
+        
+        // Display text depends on whether it's element or compound
+        const displayText = reaction.formula ? reaction.formula : reaction.result;
+        const resultName = reaction.name || reaction.resultName;
+        
+        card.innerHTML = `
+          <div class="text-center">
+            <div class="text-3xl mb-2">${reaction.emoji}</div>
+            <div class="font-bold text-gray-800">${displayText}</div>
+            <div class="text-sm text-gray-600">${resultName}</div>
+          </div>
+        `;
+        card.title = reaction.desc;
+        compoundsList.appendChild(card);
+      });
+    }
+
+    // Show Toast
+    function showToast(icon, title, desc) {
+      const toast = document.getElementById('toast');
+      document.getElementById('toastIcon').textContent = icon;
+      document.getElementById('toastTitle').textContent = title;
+      document.getElementById('toastDesc').textContent = desc;
+      
+      toast.classList.remove('translate-y-full', 'opacity-0');
+      toast.classList.add('translate-y-0', 'opacity-100');
+      
+      setTimeout(() => {
+        toast.classList.add('translate-y-full', 'opacity-0');
+        toast.classList.remove('translate-y-0', 'opacity-100');
+      }, 3000);
+    }
+
+    // Event Listeners
+    mixBtn.addEventListener('click', mixElements);
+    clearBtn.addEventListener('click', clearSelection);
+
+    // Initialize
+    init();
+  </script>
+ <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9d34137023904f5d',t:'MTc3MTk4OTcyMi4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>
